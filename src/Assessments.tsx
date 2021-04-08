@@ -1,35 +1,112 @@
 import { useEffect, useState } from "react";
 import { useAsync } from "react-async-hook";
+import { PieChart } from "react-minimal-pie-chart";
 import CaretDown from "./icons/caretDown.svg";
-import { Assessment, fetchAssessments, TOKEN_EXPIRED_ERROR } from "./api";
+import { useParams } from "react-router-dom";
+import {
+  Assessment,
+  Asset,
+  fetchAssessments,
+  useApiEndpoint,
+} from "./store/api";
+import {
+  sortByActualFinish,
+  extractReportData,
+  formatTimestamp,
+  getAssetByName,
+  findAssetAssessments,
+} from "./store/utils";
 
 function Assessments({
-  token,
-  onTokenExpired,
+  assets,
+  assessments,
 }: {
-  token: string;
-  onTokenExpired: () => void;
+  assets: Asset[];
+  assessments: Assessment[];
 }) {
-  const asyncAssessments = useAsync(fetchAssessments, [token]);
+  const [pieChartHoverSegment, setPieChartHoverSegment] = useState<
+    null | number
+  >(null);
+  const params = useParams<{ assetName: string }>();
+  const asset = getAssetByName(assets, params.assetName);
+  if (!asset) return <div>Not found</div>;
+  const assetAssessments = findAssetAssessments(assessments, asset);
 
-  useEffect(() => {
-    if (
-      asyncAssessments.error &&
-      asyncAssessments.error.message === TOKEN_EXPIRED_ERROR
-    ) {
-      onTokenExpired();
+  let summary = {
+    pass: 0,
+    fail: 0,
+    incomplete: 0,
+  };
+
+  assetAssessments.forEach((assessment) => {
+    if (assessment.status === "In Progress") {
+      summary.incomplete++;
+    } else if (assessment.assessmentResult === "Pass") {
+      summary.pass++;
+    } else if (assessment.assessmentResult === "Fail") {
+      summary.fail++;
     }
-  }, [asyncAssessments.error]);
+  });
+
+  const pieChartData = [
+    { title: "Pass", value: summary.pass, color: "#24980F" },
+    { title: "Fail", value: summary.fail, color: "#AB3117" },
+    {
+      title: "In Progress",
+      value: summary.incomplete,
+      color: "#000000",
+    },
+  ];
 
   return (
     <div>
-      <h1 className="text-5xl mb-8">Assessments</h1>
-      {asyncAssessments.loading && "Loading..."}
-      {asyncAssessments.error && asyncAssessments.error.message}
-      {asyncAssessments.result &&
-        asyncAssessments.result.map((a) => (
-          <AssessmentItem key={a.id} assessment={a} />
-        ))}
+      <h1 className="text-5xl mb-8">{asset.name}</h1>
+      {assetAssessments.length ? (
+        <div>
+          <div className="bg-gray-200 rounded-md mb-8 p-4">
+            <div className="mx-auto flex flex-col">
+              <div className="text-black flex flex-wrap items-center justify-center">
+                {pieChartData.map(({ title, value, color }) => (
+                  <div className="flex items-center justify-start mx-2">
+                    <div
+                      className="w-4 h-4 rounded-full mr-2"
+                      style={{ backgroundColor: color }}
+                    ></div>
+                    {title}
+                  </div>
+                ))}
+              </div>
+              <div className="h-96">
+                <PieChart
+                  onMouseOver={(ev, segment) =>
+                    setPieChartHoverSegment(segment)
+                  }
+                  onMouseOut={(ev, segment) => setPieChartHoverSegment(null)}
+                  segmentsShift={(segment) =>
+                    segment === pieChartHoverSegment ? 4 : 1
+                  }
+                  radius={40}
+                  animate={true}
+                  data={pieChartData.filter((v) => !!v.value)}
+                  label={({ dataEntry }) => dataEntry.value}
+                  labelStyle={{ fill: "white", fontSize: "7px" }}
+                  labelPosition={75}
+                  lineWidth={50}
+                />
+              </div>
+            </div>
+          </div>
+
+          {sortByActualFinish(assetAssessments).map((a) => (
+            <AssessmentItem key={a.id} assessment={a} />
+          ))}
+        </div>
+      ) : (
+        <div>
+          You think this shit is secure??? Without any assessments??? For shame!
+          Security first!
+        </div>
+      )}
     </div>
   );
 }
@@ -41,7 +118,14 @@ const AssessmentItem = ({ assessment }: { assessment: Assessment }) => {
 
   return (
     <div className="mb-8">
-      <h2 className="text-2xl mb-4">{assessment.title}</h2>
+      <h2 className="text-2xl mb-4 flex flex-wrap">
+        <div className="flex-grow">{assessment.title}</div>
+        <div className="">
+          {assessment.actualFinish
+            ? formatTimestamp(assessment.actualFinish)
+            : "In Progress"}
+        </div>
+      </h2>
       <div className="bg-gray-200 rounded-md">
         <div className="flex p-1 sm:p-2 ">
           {numberButton("Total", reportData.totalHosts, "")}
@@ -64,8 +148,7 @@ const AssessmentItem = ({ assessment }: { assessment: Assessment }) => {
           <div className="p-4 text-black">
             {Object.entries(reportData.hosts).map(([hostName, values]) => (
               <div className="border border-gray-400 rounded-md mb-4 p-4">
-                <div className="font-bold text-xl">{hostName}</div>
-                <table className="ml-4">
+                <table className="">
                   <tbody>
                     {Object.entries(values).map(([key, value]) => (
                       <tr key={key}>
@@ -113,67 +196,5 @@ const numberButton = (text: string, number: number, colorClass: string) => (
     <div className=" text-center font-bold">{number}</div>
   </div>
 );
-
-type ReportData = {
-  totalHosts: number;
-  pass: number;
-  fail: number;
-  percentage: number;
-  hosts: Hosts;
-};
-
-type Hosts = {
-  [key: string]: {
-    expectedResult: string;
-    actualSetting: string;
-    passFail: string;
-  };
-};
-
-const lineRegex = /([^:]+):(.*)/;
-function extractReportData(report: string): ReportData {
-  let data = {};
-
-  let div = document.createElement("div");
-  div.innerHTML = report;
-  const lines = Array.prototype.slice
-    .call(div.childNodes)
-    .map((node) => node.innerText);
-
-  let rawData: { [key: string]: string } = {};
-  let rawHosts: { [key: string]: { [key: string]: {} } } = {};
-  let currentHost = "";
-  for (let line of lines) {
-    if (line) {
-      const match = line.match(lineRegex);
-      if (match) {
-        const property = match[1].trim();
-        const value = match[2].trim();
-
-        if (property === "Hostname") {
-          currentHost = value;
-          rawHosts[currentHost] = {};
-        } else if (currentHost) {
-          rawHosts[currentHost][cleanReportDataKey(property)] = value;
-        } else {
-          rawData[cleanReportDataKey(property)] = value;
-        }
-      }
-    }
-  }
-
-  return {
-    totalHosts: parseInt(rawData.totalHosts),
-    pass: parseInt(rawData.pass),
-    fail: parseInt(rawData.fail),
-    percentage: parseFloat(rawData.percentage),
-    hosts: rawHosts as Hosts,
-  };
-}
-
-function cleanReportDataKey(key: string) {
-  let s = key.replace(/[^a-zA-Z]/g, "");
-  return s[0].toLowerCase() + s.slice(1);
-}
 
 export default Assessments;

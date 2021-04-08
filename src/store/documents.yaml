@@ -1,0 +1,17 @@
+CyMyCloud Dashboard:
+  Part Two:
+    path: /business-plan/part-2
+    content: |
+      # Business plan part two
+      This is markdown content. *Part two*
+Some other section:
+  Foo:
+    path: /other-section/foo
+    content: |
+      # Foo
+      This dfgksldfgjlksd;gjkl*
+  Bar:
+    path: /other-section/bar
+    content: |
+      # Bar
+      This is markdown content. *Bar*

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { auth } from "./api";
+import { auth } from "./store/api";
 
 enum LoginStatus {
   NotSubmitted,
