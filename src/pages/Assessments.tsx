@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { useAsync } from "react-async-hook";
 import { PieChart } from "react-minimal-pie-chart";
-import CaretDown from "./icons/caretDown.svg";
+import CaretDown from "../icons/caretDown.svg";
 import { useParams } from "react-router-dom";
 import {
   Assessment,
   Asset,
   fetchAssessments,
   useApiEndpoint,
-} from "./store/api";
+} from "../store/api";
 import {
   sortByActualFinish,
   extractReportData,
   formatTimestamp,
   getAssetByName,
   findAssetAssessments,
-} from "./store/utils";
+  assessmentsSummary,
+} from "../store/utils";
 
 function Assessments({
   assets,
@@ -32,21 +33,7 @@ function Assessments({
   if (!asset) return <div>Not found</div>;
   const assetAssessments = findAssetAssessments(assessments, asset);
 
-  let summary = {
-    pass: 0,
-    fail: 0,
-    incomplete: 0,
-  };
-
-  assetAssessments.forEach((assessment) => {
-    if (assessment.status === "In Progress") {
-      summary.incomplete++;
-    } else if (assessment.assessmentResult === "Pass") {
-      summary.pass++;
-    } else if (assessment.assessmentResult === "Fail") {
-      summary.fail++;
-    }
-  });
+  const summary = assessmentsSummary(assessments);
 
   const pieChartData = [
     { title: "Pass", value: summary.pass, color: "#24980F" },
@@ -102,9 +89,8 @@ function Assessments({
           ))}
         </div>
       ) : (
-        <div>
-          You think this shit is secure??? Without any assessments??? For shame!
-          Security first!
+        <div className="bg-red-800 px-10 py-2 m-2 rounded-md uppercase font-bold text-center">
+          This asset does not currently have any assessments.
         </div>
       )}
     </div>

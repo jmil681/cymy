@@ -10,8 +10,9 @@ import {
 import { useState, useEffect } from "react";
 
 import { fetchAssets, fetchAssessments, useApiEndpoint } from "./store/api";
-import Overview from "./Overview";
-import Assessments from "./Assessments";
+import Overview from "./pages/Overview";
+import AssessmentsModals from "./pages/AssessmentsModals";
+import Assessments from "./pages/Assessments";
 import docsPages from "./store/documents.yaml";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
@@ -68,6 +69,16 @@ const Dashboard = ({
 
             <Route path="/assessments/">
               <Overview />
+            </Route>
+
+            <Route path="/assessments2/">
+              {(assets.result && assessments.result && (
+                <AssessmentsModals
+                  assets={assets.result}
+                  assessments={assessments.result}
+                />
+              )) ||
+                "Loading..."}
             </Route>
 
             {Object.values(docsPages)

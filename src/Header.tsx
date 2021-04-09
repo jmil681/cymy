@@ -8,7 +8,7 @@ const Header = ({
   onMenuClick: () => void;
   onLogout: () => void;
 }) => (
-  <header className="fixed top-0 inset-x-0 bg-gray-900 h-16 flex items-center z-50">
+  <header className="fixed top-0 inset-x-0 bg-gray-900 h-16 flex items-center z-30">
     <div className="text-2xl pl-4 flex items-center flex-grow">
       <span
         onClick={onMenuClick}

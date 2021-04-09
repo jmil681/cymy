@@ -7,7 +7,11 @@ module.exports = {
     "public/**/*.html",
   ],
   theme: {
-    extend: {},
+    extend: {
+      width: {
+        '120': '30rem'
+      }
+    },
   },
   variants: {
     extend: {

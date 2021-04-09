@@ -1,5 +1,33 @@
 import { Assessment, Asset } from "./api";
 
+export function keepOnlyLatestAssessment(
+  assessments: Assessment[]
+): Assessment[] {
+  return sortByActualFinish(assessments).filter((value, index, arr) => {
+    return arr.findIndex((a) => a.title === value.title) === index;
+  });
+}
+
+export function assessmentsSummary(assessments: Assessment[]) {
+  let summary = {
+    pass: 0,
+    fail: 0,
+    incomplete: 0,
+  };
+
+  assessments.forEach((assessment) => {
+    if (assessment.status === "In Progress") {
+      summary.incomplete++;
+    } else if (assessment.assessmentResult === "Pass") {
+      summary.pass++;
+    } else if (assessment.assessmentResult === "Fail") {
+      summary.fail++;
+    }
+  });
+
+  return summary;
+}
+
 export function getAssetByName(assets: Asset[], assetName: string) {
   return assets.find(
     (asset) => asset.name.toLowerCase() === assetName.toLowerCase()

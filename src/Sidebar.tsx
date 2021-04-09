@@ -59,8 +59,8 @@ const sidebarItems = (assetsItems: Item[]) => (
       title="Items group 3"
       items={[
         {
-          text: "Random",
-          link: "/alsoassessments",
+          text: "Assessments Modals",
+          link: "/assessments2",
         },
       ]}
     />
