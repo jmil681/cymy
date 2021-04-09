@@ -1,5 +1,3 @@
-import "./App.css";
-import "./tailwind.output.css";
 import useLocalStorage from "./hooks/useLocalStorage";
 
 import Login from "./Login";
